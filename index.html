@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+svg {
+  font: 10px sans-serif;
+}
+
+.caption {
+  font-weight: bold;
+}
+
+.key path {
+  display: none;
+}
+
+.key line {
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.county-border {
+  fill: none;
+  stroke: #000;
+  stroke-opacity: .4;
+}
+  
+.tract {
+  stroke: #000000;
+  stroke-opacity: .2;
+}
+  
+.title {
+  font: 36px sans-serif;
+  font-weight: bold;
+
+}
+  
+.buttons {
+  font: 16px sans-serif;
+}
+
+</style>
+<body>
+  <div class=title>Alabama Population Density, 2014</div>
+  <div class=buttons><button onclick="changeColors()">Change Colors</button> <button onclick="changeTracts()">Toggle Tract Borders</button> <button onclick="changeState()">Toggle State Borders</button></div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script>
+
+var colorSet = [ 
+  ["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"],
+  ["#ecf7ff", "#c8e8fe", "#9ed4fd", "#84bbfd", "#598dfc", "#4865ef", "#1f30d7", "#0000b3", "#00007f"] ];
+  
+var colorChoice = 0;
+var tractType = 1;
+var state = 0;
+var width = 960,
+    height = 720;
+
+var formatNumber = d3.format(",d");
+
+var path = d3.geo.path()
+    .projection(null);
+
+var color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(colorSet[colorChoice]);
+
+// A position encoding for the key only.
+var x = d3.scale.linear()
+    .domain([0, 5100])
+    .range([0, 480]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .tickSize(13)
+    .tickValues(color.domain())
+    .tickFormat(function(d) { return d >= 100 ? formatNumber(d) : null; });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var g = svg.append("g")
+    .attr("class", "key")
+    .attr("transform", "translate(440,40)");
+
+g.selectAll("rect")
+    .data(color.range().map(function(d, i) {
+      return {
+        x0: i ? x(color.domain()[i - 1]) : x.range()[0],
+        x1: i < color.domain().length ? x(color.domain()[i]) : x.range()[1],
+        z: d
+      };
+    }))
+  .enter().append("rect")
+    .attr("height", 8)
+    .attr("x", function(d) { return d.x0; })
+    .attr("width", function(d) { return d.x1 - d.x0; })
+    .style("fill", function(d) { return d.z; });
+
+g.call(xAxis).append("text")
+    .attr("class", "caption")
+    .attr("y", -6)
+    .text("Population per square mile");
+
+d3.json("al.json", function(error, al) {
+  if (error) throw error;
+  
+  //var projection = d3.geo.albers()
+                    //.scale(1)
+                    //.translate([0,0]);
+
+  var tracts = topojson.feature(al, al.objects.newtracts);
+
+  // Clip tracts to land.
+  svg.append("defs").append("clipPath")
+      .attr("id", "clip-land")
+    .append("path")
+      .datum(topojson.feature(al, al.objects.newcounties))
+      .attr("d", path);
+
+  // Group tracts by color for faster rendering.
+  svg.append("g")
+      .attr("class", "tract")
+      .attr("clip-path", "url(#clip-land)")
+    .selectAll("path")
+      .data(d3.nest()
+        .key(function(d) {; return color(d.properties.population / d.properties.area * 2.58999e6); })
+        .entries(tracts.features.filter(function(d) { return d.properties.area; })))
+    .enter().append("path")
+      .style("fill", function(d) { return d.key; })
+      .attr("d", function(d) { return path({type: "FeatureCollection", features: d.values}); });
+
+  // Draw county borders.
+  svg.append("path")
+      .datum(topojson.mesh(al, al.objects.newcounties, function(a, b) { return a !== b; }))
+      .attr("class", "county-border")
+      .attr("d", path);
+  
+  
+});
+function changeColors(){
+  colorChoice = (colorChoice+1)%2;
+  
+  var formatNumber = d3.format(",d");
+
+var path = d3.geo.path()
+    .projection(null);
+
+var color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(colorSet[colorChoice]);
+
+// A position encoding for the key only.
+var x = d3.scale.linear()
+    .domain([0, 5100])
+    .range([0, 480]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .tickSize(13)
+    .tickValues(color.domain())
+    .tickFormat(function(d) { return d >= 100 ? formatNumber(d) : null; });
+
+svg.append("rect")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", width)
+    .attr("height", height)
+    .style("fill", "white");
+  
+var g = svg.append("g")
+    .attr("class", "key")
+    .attr("transform", "translate(440,40)");
+
+g.selectAll("rect")
+    .data(color.range().map(function(d, i) {
+      return {
+        x0: i ? x(color.domain()[i - 1]) : x.range()[0],
+        x1: i < color.domain().length ? x(color.domain()[i]) : x.range()[1],
+        z: d
+      };
+    }))
+  .enter().append("rect")
+    .attr("height", 8)
+    .attr("x", function(d) { return d.x0; })
+    .attr("width", function(d) { return d.x1 - d.x0; })
+    .style("fill", function(d) { return d.z; });
+
+g.call(xAxis).append("text")
+    .attr("class", "caption")
+    .attr("y", -6)
+    .text("Population per square mile");
+
+d3.json("al.json", function(error, al) {
+  if (error) throw error;
+  
+  //var projection = d3.geo.albers()
+                    //.scale(1)
+                    //.translate([0,0]);
+
+  var tracts = topojson.feature(al, al.objects.newtracts);
+
+  // Clip tracts to land.
+  svg.append("defs").append("clipPath")
+      .attr("id", "clip-land")
+    .append("path")
+      .datum(topojson.feature(al, al.objects.newcounties))
+      .attr("d", path);
+
+  // Group tracts by color for faster rendering.
+  svg.append("g")
+      .attr("class", "tract")
+      .attr("clip-path", "url(#clip-land)")
+    .selectAll("path")
+      .data(d3.nest()
+        .key(function(d) {; return color(d.properties.population / d.properties.area * 2.58999e6); })
+        .entries(tracts.features.filter(function(d) { return d.properties.area; })))
+    .enter().append("path")
+      .style("fill", function(d) { return d.key; })
+      .attr("d", function(d) { return path({type: "FeatureCollection", features: d.values}); });
+
+  // Draw county borders.
+  svg.append("path")
+      .datum(topojson.mesh(al, al.objects.newcounties, function(a, b) { return 0 == state%2?a !== b: true; }))
+      .attr("class", "county-border")
+      .attr("d", path);
+  tractType = 1;
+});
+  
+}
+  
+function changeTracts(){
+  var temp = document.getElementsByClassName("tract");
+  tractType +=1;
+  
+  for( i =0; i< temp.length; i++){
+      temp[i].style.strokeOpacity = (tractType%2)*.2;
+    }
+}
+  
+function changeState(){
+  state += 1;
+  
+  var formatNumber = d3.format(",d");
+
+var path = d3.geo.path()
+    .projection(null);
+
+var color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(colorSet[colorChoice]);
+
+// A position encoding for the key only.
+var x = d3.scale.linear()
+    .domain([0, 5100])
+    .range([0, 480]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .tickSize(13)
+    .tickValues(color.domain())
+    .tickFormat(function(d) { return d >= 100 ? formatNumber(d) : null; });
+
+svg.append("rect")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", width)
+    .attr("height", height)
+    .style("fill", "white");
+  
+var g = svg.append("g")
+    .attr("class", "key")
+    .attr("transform", "translate(440,40)");
+
+g.selectAll("rect")
+    .data(color.range().map(function(d, i) {
+      return {
+        x0: i ? x(color.domain()[i - 1]) : x.range()[0],
+        x1: i < color.domain().length ? x(color.domain()[i]) : x.range()[1],
+        z: d
+      };
+    }))
+  .enter().append("rect")
+    .attr("height", 8)
+    .attr("x", function(d) { return d.x0; })
+    .attr("width", function(d) { return d.x1 - d.x0; })
+    .style("fill", function(d) { return d.z; });
+
+g.call(xAxis).append("text")
+    .attr("class", "caption")
+    .attr("y", -6)
+    .text("Population per square mile");
+
+d3.json("al.json", function(error, al) {
+  if (error) throw error;
+  
+  //var projection = d3.geo.albers()
+                    //.scale(1)
+                    //.translate([0,0]);
+
+  var tracts = topojson.feature(al, al.objects.newtracts);
+
+  // Clip tracts to land.
+  svg.append("defs").append("clipPath")
+      .attr("id", "clip-land")
+    .append("path")
+      .datum(topojson.feature(al, al.objects.newcounties))
+      .attr("d", path);
+
+  // Group tracts by color for faster rendering.
+  svg.append("g")
+      .attr("class", "tract")
+      .attr("clip-path", "url(#clip-land)")
+    .selectAll("path")
+      .data(d3.nest()
+        .key(function(d) {; return color(d.properties.population / d.properties.area * 2.58999e6); })
+        .entries(tracts.features.filter(function(d) { return d.properties.area; })))
+    .enter().append("path")
+      .style("fill", function(d) { return d.key; })
+      .attr("d", function(d) { return path({type: "FeatureCollection", features: d.values}); });
+
+  // Draw county borders.
+  svg.append("path")
+      .datum(topojson.mesh(al, al.objects.newcounties, function(a, b) { return 0 == state%2?a !== b: true; }))
+      .attr("class", "county-border")
+      .attr("d", path);
+  tractType = 1;
+});
+  
+}
+
+d3.select(self.frameElement).style("height", height + "px");
+  
+  
+  // this code was adapted from W3schools to append my name to the end of the body after the SVG
+  // http://www.w3schools.com/jsref/prop_doc_body.asp
+    var x = document.createElement("P");
+    var t = document.createTextNode("Tal Robison - tamarobi@ucsc.edu");
+    var t2 = document.createTextNode("CMPS 165: Data programming for Visualization");
+    var t1 = document.createTextNode("Instructor: Suresh Lodha");
+    var t3 = document.createTextNode("Fall 2016");
+    x.appendChild(t);
+    x.appendChild(document.createElement('br'));
+    x.appendChild(t1);
+    x.appendChild(document.createElement('br'));
+    x.appendChild(t2);
+    x.appendChild(document.createElement('br'));
+    x.appendChild(t3);
+    document.body.appendChild(x);
+    
+
+</script>
+<body>
