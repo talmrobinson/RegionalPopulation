@@ -106,7 +106,7 @@ g.call(xAxis).append("text")
     .attr("y", -6)
     .text("Population per square mile");
 
-d3.json("al.json", function(error, al) {
+d3.json("https://raw.githubusercontent.com/talmrobinson/RegionalPopulation/master/al.json", function(error, al) {
   if (error) throw error;
   
   //var projection = d3.geo.albers()
@@ -196,7 +196,7 @@ g.call(xAxis).append("text")
     .attr("y", -6)
     .text("Population per square mile");
 
-d3.json("al.json", function(error, al) {
+d3.json("https://raw.githubusercontent.com/talmrobinson/RegionalPopulation/master/al.json", function(error, al) {
   if (error) throw error;
   
   //var projection = d3.geo.albers()
